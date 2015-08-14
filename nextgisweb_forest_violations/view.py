@@ -21,6 +21,15 @@ PERM_READ = DataScope.read
 PERM_WRITE = DataScope.write
 
 
+def gj_serialize(feat):
+    """Сериализация объекта, геометрия в GeoJSON
+    """
+
+    sfeat = serialize(feat)
+    sfeat['geom'] = feat.geom.__geo_interface__
+    return sfeat
+
+
 def getdoc(context, request):
     """Возвращаем документ и связанные данные
     """
@@ -40,7 +49,7 @@ def getdoc(context, request):
 
     result = None
     for f in query():
-        result = serialize(f)
+        result = gj_serialize(f)
         result['related'] = {}
         for key, display_name in DOCUMENTS_STACK:
             result['related'][key] = []
@@ -52,8 +61,8 @@ def getdoc(context, request):
             query.geom()
 
             query.filter_by(doc_id=f.id)
-            for feat in query():
-                result['related'][key].append(serialize(feat))
+            for f in query():
+                result['related'][key].append(gj_serialize(f))
 
     return Response(
         json.dumps(result),
