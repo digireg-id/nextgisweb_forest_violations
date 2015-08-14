@@ -48,8 +48,8 @@ def getdoc(context, request):
     query.limit(1)
 
     result = None
-    for f in query():
-        result = gj_serialize(f)
+    for doc in query():
+        result = gj_serialize(doc)
         result['related'] = {}
         for key, display_name in DOCUMENTS_STACK:
             result['related'][key] = []
@@ -60,7 +60,7 @@ def getdoc(context, request):
             query = resource.feature_query()
             query.geom()
 
-            query.filter_by(doc_id=f.id)
+            query.filter_by(doc_id=doc.id)
             for f in query():
                 result['related'][key].append(gj_serialize(f))
 
