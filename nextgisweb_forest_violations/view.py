@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import json
 
+from bunch import Bunch
 from pyramid.response import Response
 
 from nextgisweb.resource import DataScope
@@ -40,8 +41,16 @@ def getdoc(context, request):
     if fid is None:
         return None
 
+    # Запрашиваемая система координат
+    p_srs = request.params.get('srs')
+    srsid = int(p_srs) if p_srs else 4326
+    srs = Bunch(id=srsid)
+
     query = resource.feature_query()
     query.geom()
+
+    if hasattr(query, 'srs'):
+        query.srs(srs)
 
     query.filter_by(id=fid)
     query.limit(1)
@@ -58,6 +67,9 @@ def getdoc(context, request):
             
             query = resource.feature_query()
             query.geom()
+
+            if hasattr(query, 'srs'):
+                query.srs(srs)
 
             query.filter_by(doc_id=doc.id)
             for f in query():
