@@ -13,6 +13,8 @@ from nextgisweb.vector_layer import VectorLayer
 from nextgisweb.feature_layer.api import serialize as wkt_serialize
 from nextgisweb.style import IRenderableStyle
 
+from .utils import fix_aspect_ratio
+
 DOCUMENTS = (
     ('docs', 'Документы'),
     ('sheet', 'Ведомости пересчета'),
@@ -110,7 +112,7 @@ def getschema(request):
     query.box()
 
     for doc in query():
-        extent = doc.box.bounds
+        extent = fix_aspect_ratio(doc.box.bounds, p_size)
 
         # cadastre - лесоделение
         # docs - территории лесонарушений
