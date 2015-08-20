@@ -4,11 +4,14 @@ from __future__ import unicode_literals
 import json
 
 from bunch import Bunch
+from PIL import Image
+from StringIO import StringIO
 from pyramid.response import Response
 
 from nextgisweb.resource import DataScope
 from nextgisweb.vector_layer import VectorLayer
 from nextgisweb.feature_layer.api import serialize as wkt_serialize
+from nextgisweb.style import IRenderableStyle
 
 DOCUMENTS = (
     ('docs', 'Документы'),
@@ -30,7 +33,7 @@ def serialize(feat):
     return sfeat
 
 
-def getdoc(context, request):
+def getdoc(request):
     """Возвращаем документ и связанные данные
     """
 
@@ -88,6 +91,53 @@ def getdoc(context, request):
         content_type=b'application/json')
 
 
+def getschema(request):
+    """Возвращаем схему участка лесонарушения
+    """
+
+    p_size = map(int, request.GET.get('size').split(','))
+
+    fid = request.matchdict.get('fid')
+    if fid is None: return None
+
+    resource = VectorLayer.filter_by(keyname='docs').one()
+    request.resource_permission(PERM_READ, resource)
+
+    query = resource.feature_query()
+    query.filter_by(id=fid)
+    query.limit(1)
+    query.geom()
+    query.box()
+
+    for doc in query():
+        extent = doc.box.bounds
+
+        # cadastre - лесоделение
+        # docs - территории лесонарушений
+        resstyles = []
+        for key in ('cadastre', 'docs'):
+            resource = VectorLayer.filter_by(keyname=key).one()
+            request.resource_permission(PERM_READ, resource)
+            resstyle = filter(lambda r: IRenderableStyle.providedBy(r),
+                resource.children)[0]
+            resstyles.append(resstyle)
+
+        img = None
+        for style in resstyles:
+            request.resource_permission(PERM_READ, style)
+            req = style.render_request(style.srs)
+            rimg = req.render_extent(extent, p_size)
+            img = rimg if img is None else Image.alpha_composite(img, rimg)
+
+        buf = StringIO()
+        img.save(buf, 'png')
+        buf.seek(0)
+
+        return Response(body_file=buf, content_type=b'image/png')
+
+
 def setup_pyramid(comp, config):
     config.add_route('fv.doc', '/fvapi/document/{fid}')
+    config.add_route('fv.schema', '/fvapi/schema/{fid}')
     config.add_view(getdoc, route_name='fv.doc', request_method='GET')
+    config.add_view(getschema, route_name='fv.schema', request_method='GET')
