@@ -24,3 +24,17 @@ def fix_aspect_ratio(e, s):
         e[2] += dw
 
     return e
+
+def scale_extent(e, scale):
+    e = list(e)
+    ew, eh = e[2] - e[0], e[3] - e[1]
+
+    ew_scaled = scale * ew
+    eh_scaled = scale * eh
+
+    ymin = (e[0] + e[2] - ew_scaled) / 2
+    ymax = (e[0] + e[2] + ew_scaled) / 2
+    xmin = (e[1] + e[3] - eh_scaled) / 2
+    xmax = (e[1] + e[3] + eh_scaled) / 2
+
+    return ymin, xmin, ymax, xmax
