@@ -131,7 +131,14 @@ def getschema(request):
         img = None
         for style in resstyles:
             request.resource_permission(PERM_READ, style)
-            req = style.render_request(style.srs)
+
+            # Отфильтровываем документы для отрисовки
+            if style.feature_layer.keyname == 'docs':
+                cond = {'id': fid}
+            else:
+                cond = None
+
+            req = style.render_request(style.srs, cond)
             rimg = req.render_extent(extent, p_size)
             img = rimg if img is None else Image.alpha_composite(img, rimg)
 
