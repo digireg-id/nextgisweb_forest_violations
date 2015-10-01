@@ -11,7 +11,7 @@ from pyramid.response import Response
 from nextgisweb.resource import DataScope
 from nextgisweb.vector_layer import VectorLayer
 from nextgisweb.feature_layer.api import serialize as wkt_serialize
-from nextgisweb.style import IRenderableStyle
+from nextgisweb.render import IRenderableStyle
 
 from .utils import (
     fix_aspect_ratio,
