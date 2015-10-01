@@ -18,4 +18,4 @@ class ForestViolationsComponent(Component):
 
 def pkginfo():
     return dict(components=dict(
-        lookup_table="nextgisweb_forest_violations"))
+        forest_violations="nextgisweb_forest_violations"))
