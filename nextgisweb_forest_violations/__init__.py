@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 from nextgisweb.component import Component
 
 
-@Component.registry.register
 class ForestViolationsComponent(Component):
     identity = 'forest_violations'
 
