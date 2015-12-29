@@ -10,6 +10,7 @@ from pyramid.response import Response
 
 from nextgisweb.resource import DataScope
 from nextgisweb.vector_layer import VectorLayer
+from nextgisweb.vector_layer.api import _diff
 from nextgisweb.feature_layer.api import serialize as wkt_serialize
 from nextgisweb.render import IRenderableStyle
 
@@ -29,7 +30,7 @@ PERM_READ = DataScope.read
 PERM_WRITE = DataScope.write
 
 
-def serialize(feat):
+def _serialize(feat):
     """Сериализация объекта, геометрия в GeoJSON
     """
 
@@ -38,14 +39,14 @@ def serialize(feat):
     return sfeat
 
 
-def getdoc(request):
+def _getdoc(request, doc_id=None):
     """Возвращаем документ и связанные данные
     """
 
     p_srs = request.params.get('srs')
     p_traversal = request.params.get('traversal')
 
-    fid = request.matchdict.get('fid')
+    fid = doc_id if doc_id else request.matchdict.get('fid')
     if fid is None: return None
 
     # Запрашиваемая система координат
@@ -66,7 +67,7 @@ def getdoc(request):
         query.geom()
 
         for doc in query():
-            result = serialize(doc)
+            result = _serialize(doc)
 
             result['related'] = {}
             for key, name in DOCUMENTS:
@@ -84,17 +85,36 @@ def getdoc(request):
                     if key == 'docs' and traversal:
                         result['related'][key].append(traverse(reldoc.id))
                     else:
-                        result['related'][key].append(serialize(reldoc))
+                        result['related'][key].append(_serialize(reldoc))
 
         return result
 
     # Определяем связанные документы
     result = traverse(fid)
+    return result
+
+def getdoc(request):
+    return Response(
+        json.dumps(_getdoc(request)),
+        content_type=b'application/json')
+
+def getdoc_diff(request):
+    """Возвращаем историю изменений документов и связанные данные
+    """
+
+    docs = VectorLayer.filter_by(keyname='docs').one()
+    diff = _diff(request, docs.id)
+    result = {'added': [], 'changed': [], 'deleted': []}
+    for state in ('added', 'changed', 'deleted'):
+        if state != 'deleted':
+            for feat in diff[state]:
+                result[state].append(_getdoc(request, feat['id']))
+        else:
+            result[state] = diff[state]
 
     return Response(
         json.dumps(result),
         content_type=b'application/json')
-
 
 def getschema(request):
     """Возвращаем схему участка лесонарушения
@@ -151,6 +171,8 @@ def getschema(request):
 
 def setup_pyramid(comp, config):
     config.add_route('fv.doc', '/fvapi/document/{fid}')
+    config.add_route('fv.doc.diff', '/fvapi/document/diff/')
     config.add_route('fv.schema', '/fvapi/schema/{fid}')
     config.add_view(getdoc, route_name='fv.doc', request_method='GET')
+    config.add_view(getdoc_diff, route_name='fv.doc.diff', request_method='GET')
     config.add_view(getschema, route_name='fv.schema', request_method='GET')
